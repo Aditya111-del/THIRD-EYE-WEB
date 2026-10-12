@@ -12,6 +12,8 @@ frontend/.tanstack/
 frontend/.nitro/
 .vercel/
 frontend/.vercel/
+client/
+frontend/client/
 
 # Logs
 *.log

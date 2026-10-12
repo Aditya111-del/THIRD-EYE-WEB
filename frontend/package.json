@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && mkdir -p client dist/client && cp -r .vercel/output/static/* client/ 2>/dev/null || true && cp -r .vercel/output/static/* dist/client/ 2>/dev/null || true",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",

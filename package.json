@@ -6,7 +6,7 @@
     "dev": "npm run dev --prefix frontend",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
-    "build": "NITRO_PRESET=vercel npm run build --prefix frontend && cp -r frontend/.vercel .vercel",
+    "build": "npm run build --prefix frontend && cp -r frontend/.vercel .vercel 2>/dev/null || true && mkdir -p client frontend/dist/client && cp -r frontend/.vercel/output/static/* client/ 2>/dev/null || true && cp -r frontend/.vercel/output/static/* frontend/dist/client/ 2>/dev/null || true",
     "install:all": "npm install --prefix frontend && npm install --prefix backend"
   }
 }
