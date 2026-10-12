@@ -1,0 +1,5 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { ContentPage, DownloadButtons, pageHead } from '@/components/third-eye';
+import portrait from '@/assets/third-eye-agent.jpg';
+export const Route = createFileRoute('/about')({ head: () => pageHead('About', 'Meet Third eye, a desktop agentic coding IDE built around your ideas.'), component: Page });
+function Page() { return <ContentPage title="A new perspective." eyebrow="ABOUT THIRD EYE"><p className="page-lead">Your ideas deserve more than another place to type.</p><img className="about-portrait" src={portrait} alt="Third eye's futuristic red-visor identity" width={1024} height={1024}/><h2>Meet Third eye.</h2><p>Third eye is an agentic coding IDE for your desktop. A dedicated space for your code, your context, and the things you want to bring to life.</p><h2>Less friction. More creation.</h2><p>We believe the tools you work with should help you see possibilities—not get in the way of them. The vision behind Third eye is simple: keep your ideas at the center.</p><DownloadButtons/></ContentPage>; }

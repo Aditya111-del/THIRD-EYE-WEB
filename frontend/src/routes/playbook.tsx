@@ -1,0 +1,4 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { ContentPage, pageHead } from '@/components/third-eye';
+export const Route = createFileRoute('/playbook')({ head: () => pageHead('From idea to implementation', 'A thoughtful approach to working with an agentic coding IDE.'), component: Page });
+function Page() { return <ContentPage title='From idea to implementation' eyebrow='THE PLAYBOOK'><h2>01 / Start with the outcome</h2><p>Describe what you want to build, who it’s for, and what success looks like.</p><h2>02 / Keep the context close</h2><p>Share your project structure, conventions, and constraints. Good context makes better collaboration.</p><h2>03 / Review. Refine. Repeat.</h2><p>Stay in control. Review proposed changes, verify the behavior, and refine your idea one step at a time.</p></ContentPage>; }
