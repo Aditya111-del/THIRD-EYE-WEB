@@ -10,6 +10,8 @@ frontend/dist/
 frontend/.output/
 frontend/.tanstack/
 frontend/.nitro/
+.vercel/
+frontend/.vercel/
 
 # Logs
 *.log
