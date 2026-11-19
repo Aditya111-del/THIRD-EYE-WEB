@@ -1,35 +1,50 @@
 import nodemailer from "nodemailer";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "future@helmer.world";
-const SMTP_USER = process.env.SMTP_USER || "future@helmer.world";
-const SMTP_PASS = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD || "";
-const SMTP_HOST = process.env.SMTP_HOST || "smtpout.secureserver.net";
-const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
+export function getSmtpConfig() {
+  const host =
+    process.env.SMTP_HOST?.trim() || "smtpout.secureserver.net";
+  // Automatically fix smtp.titan.email to GoDaddy's working secureserver host
+  const cleanHost =
+    host === "smtp.titan.email" ? "smtpout.secureserver.net" : host;
 
-let transporter = null;
+  const port = Number(process.env.SMTP_PORT) || 465;
+  const user = process.env.SMTP_USER?.trim() || "future@helmer.world";
+  const pass = (process.env.SMTP_PASS || process.env.EMAIL_PASSWORD || "").trim();
+  const adminEmail = process.env.ADMIN_EMAIL?.trim() || "future@helmer.world";
 
-function getTransporter() {
-  if (!transporter && SMTP_PASS) {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS,
-      },
-    });
+  return { host: cleanHost, port, user, pass, adminEmail };
+}
+
+export function createMailer() {
+  const { host, port, user, pass } = getSmtpConfig();
+
+  if (!pass) {
+    return null;
   }
-  return transporter;
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: {
+      user,
+      pass,
+    },
+    // Useful timeout settings to prevent hanging
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
+  });
 }
 
 export async function sendWaitlistNotification({ email, platform }) {
-  const mailer = getTransporter();
+  const { user, adminEmail, pass } = getSmtpConfig();
+  const mailer = createMailer();
 
-  if (!mailer) {
+  if (!mailer || !pass) {
     console.warn(
-      `[Email Service] Cannot send email notification: SMTP_PASS is not configured.\n` +
-      `                Set SMTP_PASS in your environment variables for ${SMTP_USER}.`
+      `[Email Service] Cannot send email notification: SMTP_PASS is empty or missing in environment variables.\n` +
+      `                Make sure SMTP_PASS is added in Render under third-eye-back -> Environment.`
     );
     return { sent: false, reason: "SMTP_PASS not configured" };
   }
@@ -41,16 +56,18 @@ export async function sendWaitlistNotification({ email, platform }) {
       ? "macOS"
       : "All Platforms";
 
-  // 1. Notification alert to future@helmer.world
+  console.log(`[Email Service] Sending waitlist notification for ${email} (${platformName})...`);
+
+  // 1. Alert to future@helmer.world
   const adminMailOptions = {
-    from: `"Third eye" <${SMTP_USER}>`,
-    to: ADMIN_EMAIL,
+    from: `"Third eye" <${user}>`,
+    to: adminEmail,
     subject: `New Waiting List Signup: ${email} (${platformName})`,
     text: `You have a new waitlist signup for Third eye!\n\nEmail: ${email}\nPlatform: ${platformName}\nDate: ${new Date().toLocaleString()}\n`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #0f172a; margin-top: 0;">New Waiting List Signup</h2>
-        <p style="color: #475569; font-size: 15px;">A new user has joined the Third eye early access list.</p>
+        <p style="color: #475569; font-size: 15px;">A new developer has joined the Third eye early access list.</p>
         <div style="background: #f8fafc; padding: 16px; border-radius: 6px; margin: 18px 0; border: 1px solid #e2e8f0;">
           <p style="margin: 4px 0;"><strong>Subscriber Email:</strong> <a href="mailto:${email}">${email}</a></p>
           <p style="margin: 4px 0;"><strong>Target Platform:</strong> ${platformName}</p>
@@ -60,9 +77,9 @@ export async function sendWaitlistNotification({ email, platform }) {
     `,
   };
 
-  // 2. Welcome/confirmation email to the subscriber
+  // 2. Welcome email to the subscriber
   const userMailOptions = {
-    from: `"Third eye" <${SMTP_USER}>`,
+    from: `"Third eye" <${user}>`,
     to: email,
     subject: `You're on the Third eye early access list (${platformName})`,
     text: `Hello,\n\nThank you for your interest in Third eye! You're on the waiting list for ${platformName}.\nWe'll send your download invite the moment builds open.\n\nBest,\nThe Third eye Team\nfuture@helmer.world`,
@@ -85,20 +102,24 @@ export async function sendWaitlistNotification({ email, platform }) {
   };
 
   try {
-    const [adminInfo, userInfo] = await Promise.allSettled([
-      mailer.sendMail(adminMailOptions),
-      mailer.sendMail(userMailOptions),
-    ]);
+    const adminResult = await mailer.sendMail(adminMailOptions);
+    console.log(`[Email Service] Admin notification sent: ${adminResult.messageId}`);
+
+    let userResult = null;
+    try {
+      userResult = await mailer.sendMail(userMailOptions);
+      console.log(`[Email Service] User confirmation sent to ${email}: ${userResult.messageId}`);
+    } catch (userErr) {
+      console.warn(`[Email Service] Could not send confirmation to user: ${userErr.message}`);
+    }
 
     return {
       sent: true,
-      adminStatus:
-        adminInfo.status === "fulfilled" ? "sent" : adminInfo.reason?.message,
-      userStatus:
-        userInfo.status === "fulfilled" ? "sent" : userInfo.reason?.message,
+      adminMessageId: adminResult.messageId,
+      userMessageId: userResult?.messageId,
     };
   } catch (error) {
-    console.error("[Email Service Error]:", error);
+    console.error(`[Email Service Error]: Failed to send email notification:`, error.message);
     return { sent: false, error: error.message };
   }
 }

@@ -133,3 +133,27 @@ export async function getWaitlistStats(req, res) {
     });
   }
 }
+
+/**
+ * Diagnostic endpoint to test email delivery and verify SMTP configuration
+ */
+export async function testEmailEndpoint(req, res) {
+  try {
+    const targetEmail = req.query.to || "future@helmer.world";
+    const result = await sendWaitlistNotification({
+      email: targetEmail,
+      platform: "macos",
+    });
+
+    return res.json({
+      success: result.sent,
+      details: result,
+      target: targetEmail,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
