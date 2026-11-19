@@ -1,5 +1,6 @@
 import { Waitlist } from "../models/Waitlist.js";
 import { isDbConnected } from "../config/db.js";
+import { sendWaitlistNotification } from "../services/emailService.js";
 
 // In-memory fallback cache when MongoDB is not connected
 const memoryWaitlist = new Map();
@@ -33,6 +34,14 @@ export async function joinWaitlist(req, res) {
       ? String(platform).toLowerCase()
       : "all";
 
+    // Trigger email notification in background (non-blocking)
+    sendWaitlistNotification({
+      email: normalizedEmail,
+      platform: cleanPlatform,
+    }).catch((err) => {
+      console.warn("[Waitlist Notification Warning]:", err?.message || err);
+    });
+
     if (!isDbConnected()) {
       // Memory store fallback
       memoryWaitlist.set(normalizedEmail, {
@@ -40,7 +49,9 @@ export async function joinWaitlist(req, res) {
         platform: cleanPlatform,
         source: String(source || "download_modal"),
         updatedAt: new Date().toISOString(),
-        createdAt: memoryWaitlist.get(normalizedEmail)?.createdAt || new Date().toISOString(),
+        createdAt:
+          memoryWaitlist.get(normalizedEmail)?.createdAt ||
+          new Date().toISOString(),
       });
 
       return res.status(200).json({
@@ -122,4 +133,3 @@ export async function getWaitlistStats(req, res) {
     });
   }
 }
-
