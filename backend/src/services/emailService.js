@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "future@helmer.world";
 const SMTP_USER = process.env.SMTP_USER || "future@helmer.world";
 const SMTP_PASS = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD || "";
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.titan.email";
+const SMTP_HOST = process.env.SMTP_HOST || "smtpout.secureserver.net";
 const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
 
 let transporter = null;
