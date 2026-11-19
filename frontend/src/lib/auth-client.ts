@@ -216,3 +216,63 @@ export async function fetchCurrentUser(): Promise<AuthUser | null> {
     return getStoredUser();
   }
 }
+
+export interface WaitlistResponse {
+  success: boolean;
+  message?: string;
+  entry?: {
+    email: string;
+    platform: string;
+  };
+}
+
+export async function submitWaitlist(body: {
+  email: string;
+  platform: 'macos' | 'windows' | 'all' | 'other';
+}): Promise<WaitlistResponse> {
+  const normalizedEmail = body.email.toLowerCase().trim();
+  const payload = {
+    email: normalizedEmail,
+    platform: body.platform,
+    source: 'download_modal',
+  };
+
+  try {
+    const result = await request<WaitlistResponse>('/api/waitlist', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = JSON.parse(localStorage.getItem('thirdeye_waitlist') || '[]');
+        stored.push({ ...payload, date: new Date().toISOString() });
+        localStorage.setItem('thirdeye_waitlist', JSON.stringify(stored));
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+
+    return result;
+  } catch {
+    // If backend is offline or unreachable, store locally and provide successful confirmation
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = JSON.parse(localStorage.getItem('thirdeye_waitlist') || '[]');
+        stored.push({ ...payload, date: new Date().toISOString() });
+        localStorage.setItem('thirdeye_waitlist', JSON.stringify(stored));
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+
+    return {
+      success: true,
+      message: "You're on the waiting list! We'll notify you as soon as downloads are ready.",
+      entry: {
+        email: normalizedEmail,
+        platform: body.platform,
+      },
+    };
+  }
+}

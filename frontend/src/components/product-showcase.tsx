@@ -156,7 +156,7 @@ export function ProductShowcase() {
         <span className="content-eyebrow">YOUR NEXT CHAPTER</span>
         <h2>Meet Third eye.<br />On your desktop.</h2>
         <DownloadButtons />
-        <p>macOS & Windows · Download links coming soon</p>
+        <p>macOS & Windows · Join the early access waiting list</p>
         <Button variant="navigation" asChild>
           <Link to={user ? "/profile" : "/login"}>
             {user ? "Your eye" : "Already have an account? Log in"} <ArrowUpRight />

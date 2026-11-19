@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -9,6 +10,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Name cannot exceed 100 characters"],
     },
+
     email: {
       type: String,
       required: [true, "Email is required"],
@@ -17,41 +19,50 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
+
     phone: {
       type: String,
       trim: true,
       default: "",
     },
+
     password: {
       type: String,
       minlength: [6, "Password must be at least 6 characters long"],
       select: false,
     },
+
     authProvider: {
       type: String,
       enum: ["local", "google", "apple"],
       default: "local",
     },
+
     googleId: {
       type: String,
       sparse: true,
     },
+
     appleId: {
       type: String,
       sparse: true,
     },
+
     avatar: {
       type: String,
       default: "",
     },
+
     isEmailVerified: {
       type: Boolean,
       default: false,
     },
+
     isPhoneVerified: {
       type: Boolean,
       default: false,
     },
+
     role: {
       type: String,
       enum: ["user", "developer", "admin"],
@@ -63,25 +74,27 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-userSchema.pre("save", async function (next) {
+// Hash the password before saving.
+// Async middleware uses its returned promise; do not call next().
+userSchema.pre("save", async function () {
   if (!this.isModified("password") || !this.password) {
-    return next();
+    return;
   }
 
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
+// Compare a plain-text password with the stored hash.
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  if (!this.password) return false;
+  if (!this.password) {
+    return false;
+  }
+
   return bcrypt.compare(candidatePassword, this.password);
 };
 
+// Return user information without exposing the password.
 userSchema.methods.toPublicProfile = function () {
   return {
     id: this._id,

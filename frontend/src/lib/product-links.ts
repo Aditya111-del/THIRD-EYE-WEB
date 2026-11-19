@@ -4,5 +4,5 @@ export const productLinks: { windows: string; macos: string; login: string; regi
   macos: '',
   login: '/login',
   register: '/register',
-  contact: '',
+  contact: 'future@helmer.world',
 };
