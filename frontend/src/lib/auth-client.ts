@@ -23,10 +23,15 @@ export interface AuthResponse {
 const TOKEN_KEY = 'thirdeye_auth_token';
 const USER_KEY = 'thirdeye_auth_user';
 
-// Fallback to relative URL or backend port 5001
-const API_URL = typeof window !== 'undefined' && window.location.port === '5001'
-  ? ''
-  : ((import.meta.env['VITE_API_BASE_URL'] as string | undefined) || 'http://localhost:5001');
+const DEFAULT_API_URL = 'https://third-eye-back.onrender.com';
+
+// Fallback to relative URL when on local backend port 5001, otherwise Render backend
+const API_URL =
+  typeof window !== 'undefined' &&
+  window.location.hostname === 'localhost' &&
+  window.location.port === '5001'
+    ? ''
+    : ((import.meta.env['VITE_API_BASE_URL'] as string | undefined)?.trim() || DEFAULT_API_URL);
 
 type AuthListener = (user: AuthUser | null) => void;
 const listeners = new Set<AuthListener>();
@@ -237,42 +242,36 @@ export async function submitWaitlist(body: {
     source: 'download_modal',
   };
 
+  // Always save in localStorage so submission is never lost
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = JSON.parse(localStorage.getItem('thirdeye_waitlist') || '[]');
+      stored.push({ ...payload, date: new Date().toISOString() });
+      localStorage.setItem('thirdeye_waitlist', JSON.stringify(stored));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+
   try {
     const result = await request<WaitlistResponse>('/api/waitlist', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = JSON.parse(localStorage.getItem('thirdeye_waitlist') || '[]');
-        stored.push({ ...payload, date: new Date().toISOString() });
-        localStorage.setItem('thirdeye_waitlist', JSON.stringify(stored));
-      } catch {
-        // Ignore localStorage errors
-      }
+    if (result && result.success) {
+      return result;
     }
-
-    return result;
   } catch {
-    // If backend is offline or unreachable, store locally and provide successful confirmation
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = JSON.parse(localStorage.getItem('thirdeye_waitlist') || '[]');
-        stored.push({ ...payload, date: new Date().toISOString() });
-        localStorage.setItem('thirdeye_waitlist', JSON.stringify(stored));
-      } catch {
-        // Ignore localStorage errors
-      }
-    }
-
-    return {
-      success: true,
-      message: "You're on the waiting list! We'll notify you as soon as downloads are ready.",
-      entry: {
-        email: normalizedEmail,
-        platform: body.platform,
-      },
-    };
+    // Gracefully fallback when backend waitlist endpoint is offline or pending deploy
   }
+
+  return {
+    success: true,
+    message: "You're on the waiting list! We'll notify you as soon as downloads are ready.",
+    entry: {
+      email: normalizedEmail,
+      platform: body.platform,
+    },
+  };
 }
